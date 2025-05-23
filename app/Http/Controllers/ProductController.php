@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Supplier;
@@ -30,7 +31,7 @@ class ProductController extends Controller
         $query = Product::with(['category', 'supplier']);
 
         // Recherche
-        if ($request->has('search')) {
+        if ($request->has('search') && !empty($request->search)) {
             $search = $request->search;
             $query->where(function($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -45,7 +46,7 @@ class ProductController extends Controller
         }
 
         // Filtre par stock
-        if ($request->has('stock_status')) {
+        if ($request->has('stock_status') && !empty($request->stock_status)) {
             if ($request->stock_status == 'low') {
                 $query->whereColumn('stock_quantity', '<=', 'stock_threshold');
             } elseif ($request->stock_status == 'out') {
@@ -89,8 +90,8 @@ class ProductController extends Controller
             'barcode' => 'nullable|string|unique:products',
             'description' => 'nullable|string',
             'supplier_id' => 'nullable|exists:suppliers,id',
-            'expiry_date' => 'nullable|date',
-            'image' => 'nullable|image|max:2048'
+            'expiry_date' => 'nullable|date|after:today',
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
@@ -100,7 +101,8 @@ class ProductController extends Controller
         }
 
         $product = new Product();
-        $product->fill($request->except('image'));
+        $product->fill($request->except('image', 'prescription_required'));
+        $product->prescription_required = $request->has('prescription_required');
 
         if ($request->hasFile('image')) {
             $imagePath = $request->file('image')->store('products', 'public');
@@ -121,7 +123,7 @@ class ProductController extends Controller
      */
     public function show($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with(['category', 'supplier'])->findOrFail($id);
         return view('inventory.show', compact('product'));
     }
 
@@ -159,7 +161,7 @@ class ProductController extends Controller
             'description' => 'nullable|string',
             'supplier_id' => 'nullable|exists:suppliers,id',
             'expiry_date' => 'nullable|date',
-            'image' => 'nullable|image|max:2048'
+            'image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048'
         ]);
 
         if ($validator->fails()) {
@@ -169,7 +171,8 @@ class ProductController extends Controller
         }
 
         $product = Product::findOrFail($id);
-        $product->fill($request->except('image'));
+        $product->fill($request->except('image', 'prescription_required'));
+        $product->prescription_required = $request->has('prescription_required');
 
         if ($request->hasFile('image')) {
             // Supprimer l'ancienne image si elle existe

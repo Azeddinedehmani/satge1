@@ -64,9 +64,4 @@ class Kernel extends HttpKernel
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'pharmacist' => \App\Http\Middleware\PharmacistMiddleware::class,
     ];
-    protected function schedule(Schedule $schedule)
-{
-    // Nettoyer les codes expirés toutes les heures
-    $schedule->command('password-reset:clean-expired')->hourly();
-}
 }

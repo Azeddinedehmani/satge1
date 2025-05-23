@@ -4,8 +4,6 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PharmacistController;
-use App\Http\Middleware\AdminMiddleware;
-use App\Http\Middleware\PharmacistMiddleware;
 use App\Http\Controllers\ProductController;
 
 /*
@@ -27,27 +25,31 @@ Route::get('/', function () {
 });
 
 // Authentication routes
-Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
-
-// Password reset routes
-Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.forgot');
-Route::post('/send-reset-code', [AuthController::class, 'sendResetCode'])->name('password.send.code');
-Route::get('/reset-password', [AuthController::class, 'showResetForm'])->name('password.reset.form');
-Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
-
-// Admin routes - Référence directe à la classe middleware
-Route::prefix('admin')->middleware(['auth', AdminMiddleware::class])->group(function () {
-    Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
+    Route::post('/login', [AuthController::class, 'login']);
+    
+    // Password reset routes
+    Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.forgot');
+    Route::post('/send-reset-code', [AuthController::class, 'sendResetCode'])->name('password.send.code');
+    Route::get('/reset-password', [AuthController::class, 'showResetForm'])->name('password.reset.form');
+    Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 });
 
-// Pharmacist routes - Référence directe à la classe middleware
-Route::prefix('pharmacist')->middleware(['auth', PharmacistMiddleware::class])->group(function () {
-    Route::get('/dashboard', [PharmacistController::class, 'index'])->name('pharmacist.dashboard');
-});
+// Authenticated routes
+Route::middleware('auth')->group(function () {
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    
+    // Admin routes
+    Route::prefix('admin')->middleware(\App\Http\Middleware\AdminMiddleware::class)->group(function () {
+        Route::get('/dashboard', [AdminController::class, 'index'])->name('admin.dashboard');
+    });
 
-// Routes pour la gestion des produits
-Route::middleware(['auth'])->group(function () {
+    // Pharmacist routes
+    Route::prefix('pharmacist')->middleware(\App\Http\Middleware\PharmacistMiddleware::class)->group(function () {
+        Route::get('/dashboard', [PharmacistController::class, 'index'])->name('pharmacist.dashboard');
+    });
+
+    // Inventory management routes (accessible by both admin and pharmacist)
     Route::resource('inventory', ProductController::class);
 });

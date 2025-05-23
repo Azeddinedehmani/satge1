@@ -22,8 +22,8 @@ class AuthController extends Controller
      */
     public function __construct()
     {
-        // Remplacer auth:api par auth (utilise le garde web par défaut)
         $this->middleware('auth', ['except' => ['login', 'showLoginForm', 'showForgotPasswordForm', 'sendResetCode', 'showResetForm', 'resetPassword']]);
+        $this->middleware('guest', ['only' => ['showLoginForm', 'login', 'showForgotPasswordForm', 'sendResetCode', 'showResetForm', 'resetPassword']]);
     }
 
     /**
@@ -37,9 +37,10 @@ class AuthController extends Controller
     }
 
     /**
-     * Get a JWT via given credentials.
+     * Handle login request
      *
-     * @return \Illuminate\Http\JsonResponse
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function login(Request $request)
     {
@@ -54,21 +55,30 @@ class AuthController extends Controller
                 ->withInput();
         }
 
-        if (!$token = auth()->attempt($validator->validated())) {
-            return redirect()->back()
-                ->withErrors(['email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'])
-                ->withInput();
+        $credentials = $request->only('email', 'password');
+        $remember = $request->has('remember');
+
+        if (Auth::attempt($credentials, $remember)) {
+            $request->session()->regenerate();
+            
+            $user = Auth::user();
+            Log::info('User logged in successfully', [
+                'user_id' => $user->id,
+                'email' => $user->email,
+                'ip' => $request->ip()
+            ]);
+
+            // Redirect based on user role
+            if ($user->isAdmin()) {
+                return redirect()->intended(route('admin.dashboard'));
+            } else {
+                return redirect()->intended(route('pharmacist.dashboard'));
+            }
         }
 
-        // Store token in session
-        session(['jwt_token' => $token]);
-
-        // Redirect based on user role
-        if (auth()->user()->isAdmin()) {
-            return redirect()->route('admin.dashboard');
-        } else {
-            return redirect()->route('pharmacist.dashboard');
-        }
+        return redirect()->back()
+            ->withErrors(['email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'])
+            ->withInput();
     }
 
     /**
@@ -128,38 +138,61 @@ class AuthController extends Controller
             
             Log::info('Password reset code generated', [
                 'email' => $email,
-                'code_length' => strlen($code)
+                'code' => $code // Log the actual code for debugging
             ]);
 
-            // Test mail configuration
-            $mailConfig = config('mail');
-            Log::info('Mail configuration', [
-                'default_mailer' => $mailConfig['default'],
-                'smtp_host' => $mailConfig['mailers']['smtp']['host'] ?? 'not set',
-                'smtp_port' => $mailConfig['mailers']['smtp']['port'] ?? 'not set',
-                'from_address' => $mailConfig['from']['address'] ?? 'not set'
-            ]);
-
-            // Envoyer l'email
-            Mail::to($email)->send(new PasswordResetCodeMail($code, $user->name));
+            // Try to send email with timeout handling
+            $mailSent = false;
+            $errorMessage = '';
             
-            Log::info('Password reset code email sent successfully', [
-                'email' => $email,
-                'user_id' => $user->id
-            ]);
+            try {
+                // Set a shorter timeout for email sending
+                ini_set('max_execution_time', 30);
+                
+                Mail::to($email)->send(new PasswordResetCodeMail($code, $user->name));
+                $mailSent = true;
+                
+                Log::info('Password reset code email sent successfully', [
+                    'email' => $email,
+                    'user_id' => $user->id
+                ]);
+                
+            } catch (\Exception $mailException) {
+                $errorMessage = $mailException->getMessage();
+                Log::error('Failed to send password reset code email', [
+                    'email' => $email,
+                    'error' => $errorMessage,
+                    'trace' => $mailException->getTraceAsString()
+                ]);
+            }
             
-            return redirect()->route('password.reset.form', ['email' => $email])
-                ->with('success', 'Un code de vérification a été envoyé à votre adresse email.');
+            // Reset execution time limit
+            ini_set('max_execution_time', 60);
+            
+            if ($mailSent) {
+                return redirect()->route('password.reset.form', ['email' => $email])
+                    ->with('success', 'Un code de vérification a été envoyé à votre adresse email.');
+            } else {
+                // Email failed but code was generated - show the code for development
+                if (config('app.debug')) {
+                    return redirect()->route('password.reset.form', ['email' => $email])
+                        ->with('success', "Code de vérification généré: <strong>{$code}</strong> (Email non envoyé: {$errorMessage})");
+                } else {
+                    return redirect()->back()
+                        ->withErrors(['email' => 'Erreur lors de l\'envoi de l\'email. Le code a été généré mais l\'envoi a échoué.'])
+                        ->withInput();
+                }
+            }
                 
         } catch (\Exception $e) {
-            Log::error('Failed to send password reset code email', [
+            Log::error('Failed to generate password reset code', [
                 'email' => $email,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
             
             return redirect()->back()
-                ->withErrors(['email' => 'Erreur lors de l\'envoi de l\'email: ' . $e->getMessage()])
+                ->withErrors(['email' => 'Erreur lors de la génération du code. Veuillez réessayer plus tard.'])
                 ->withInput();
         }
     }
@@ -247,36 +280,18 @@ class AuthController extends Controller
     }
 
     /**
-     * Get the authenticated User.
+     * Log the user out
      *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function me()
-    {
-        return response()->json(auth()->user());
-    }
-
-    /**
-     * Log the user out (Invalidate the token).
-     *
+     * @param \Illuminate\Http\Request $request
      * @return \Illuminate\Http\RedirectResponse
      */
-    public function logout()
+    public function logout(Request $request)
     {
-        auth()->logout();
-        session()->forget('jwt_token');
-        return redirect()->route('login');
-    }
-
-    /**
-     * Refresh a token.
-     *
-     * @return \Illuminate\Http\JsonResponse
-     */
-    public function refresh()
-    {
-        $token = auth()->refresh();
-        session(['jwt_token' => $token]);
-        return response()->json(['token' => $token]);
+        Auth::logout();
+        
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        
+        return redirect()->route('login')->with('success', 'Vous avez été déconnecté avec succès.');
     }
 }
