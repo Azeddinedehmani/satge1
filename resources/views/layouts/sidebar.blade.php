@@ -23,20 +23,20 @@
                 </a>
             </li>
             
-           <li class="nav-item">
-    <a class="nav-link {{ request()->is('inventory*') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
-        <i class="fas fa-pills"></i> Inventaire
-    </a>
-</li>
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('inventory*') ? 'active' : '' }}" href="{{ route('inventory.index') }}">
+                    <i class="fas fa-pills"></i> Inventaire
+                </a>
+            </li>
             
             <li class="nav-item">
-                <a class="nav-link" href="#">
+                <a class="nav-link {{ request()->is('sales*') ? 'active' : '' }}" href="{{ route('sales.index') }}">
                     <i class="fas fa-cash-register"></i> Ventes
                 </a>
             </li>
             
             <li class="nav-item">
-                <a class="nav-link" href="#">
+                <a class="nav-link {{ request()->is('clients*') ? 'active' : '' }}" href="{{ route('clients.index') }}">
                     <i class="fas fa-users"></i> Clients
                 </a>
             </li>

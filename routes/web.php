@@ -5,6 +5,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PharmacistController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\ClientController;
+use App\Http\Controllers\SaleController;
 
 /*
 |--------------------------------------------------------------------------
@@ -52,4 +54,12 @@ Route::middleware('auth')->group(function () {
 
     // Inventory management routes (accessible by both admin and pharmacist)
     Route::resource('inventory', ProductController::class);
+
+    // Client management routes
+    Route::resource('clients', ClientController::class);
+
+    // Sales management routes
+    Route::resource('sales', SaleController::class);
+    Route::get('sales/{id}/print', [SaleController::class, 'print'])->name('sales.print');
+    Route::get('api/products/{id}', [SaleController::class, 'getProduct'])->name('api.products.show');
 });
