@@ -6,7 +6,7 @@ use App\Http\Controllers\AdminController;
 use App\Http\Controllers\PharmacistController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Middleware\PharmacistMiddleware;
-use App\Http\Controllers\ProductController; // Ajoutez cette ligne
+use App\Http\Controllers\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -30,6 +30,12 @@ Route::get('/', function () {
 Route::get('/login', [AuthController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Password reset routes
+Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.forgot');
+Route::post('/send-reset-code', [AuthController::class, 'sendResetCode'])->name('password.send.code');
+Route::get('/reset-password', [AuthController::class, 'showResetForm'])->name('password.reset.form');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 
 // Admin routes - Référence directe à la classe middleware
 Route::prefix('admin')->middleware(['auth', AdminMiddleware::class])->group(function () {

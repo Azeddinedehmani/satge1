@@ -7,7 +7,7 @@
             <div class="card shadow-lg">
                 <div class="card-header bg-primary text-white text-center">
                     <h3 class="m-0 fw-bold">PHARMACIA</h3>
-                    <p class="m-0">Système de Gestion de Pharmacie</p>
+                    <p class="m-0">Mot de passe oublié</p>
                 </div>
 
                 <div class="card-body p-4">
@@ -18,7 +18,13 @@
                         </div>
                     @endif
 
-                    <form method="POST" action="{{ route('login') }}">
+                    <div class="text-center mb-4">
+                        <i class="fas fa-lock fa-3x text-muted mb-3"></i>
+                        <h4>Réinitialiser votre mot de passe</h4>
+                        <p class="text-muted">Saisissez votre adresse email pour recevoir un code de vérification</p>
+                    </div>
+
+                    <form method="POST" action="{{ route('password.send.code') }}">
                         @csrf
 
                         <div class="row mb-3">
@@ -35,45 +41,18 @@
                             </div>
                         </div>
 
-                        <div class="row mb-3">
-                            <label for="password" class="col-md-4 col-form-label text-md-end">{{ __('Mot de passe') }}</label>
-
-                            <div class="col-md-6">
-                                <input id="password" type="password" class="form-control @error('password') is-invalid @enderror" name="password" required autocomplete="current-password">
-
-                                @error('password')
-                                    <span class="invalid-feedback" role="alert">
-                                        <strong>{{ $message }}</strong>
-                                    </span>
-                                @enderror
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6 offset-md-4">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="remember" id="remember" {{ old('remember') ? 'checked' : '' }}>
-
-                                    <label class="form-check-label" for="remember">
-                                        {{ __('Se souvenir de moi') }}
-                                    </label>
-                                </div>
-                            </div>
-                        </div>
-
                         <div class="row mb-0">
                             <div class="col-md-8 offset-md-4">
                                 <button type="submit" class="btn btn-primary px-4">
-                                    {{ __('Connexion') }}
+                                    <i class="fas fa-paper-plane me-1"></i> {{ __('Envoyer le code') }}
                                 </button>
                             </div>
                         </div>
                     </form>
 
                     <div class="text-center mt-4">
-                        <a href="{{ route('password.forgot') }}" class="text-decoration-none">
-                            <i class="fas fa-question-circle me-1"></i>
-                            Mot de passe oublié ?
+                        <a href="{{ route('login') }}" class="text-decoration-none">
+                            <i class="fas fa-arrow-left me-1"></i> Retour à la connexion
                         </a>
                     </div>
                 </div>
