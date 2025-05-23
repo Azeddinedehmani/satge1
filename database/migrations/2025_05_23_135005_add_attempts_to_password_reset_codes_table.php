@@ -12,7 +12,9 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('password_reset_codes', function (Blueprint $table) {
-            //
+            if (!Schema::hasColumn('password_reset_codes', 'attempts')) {
+                $table->integer('attempts')->default(0)->after('used');
+            }
         });
     }
 
@@ -22,7 +24,9 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('password_reset_codes', function (Blueprint $table) {
-            //
+            if (Schema::hasColumn('password_reset_codes', 'attempts')) {
+                $table->dropColumn('attempts');
+            }
         });
     }
 };

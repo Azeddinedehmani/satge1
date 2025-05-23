@@ -115,17 +115,51 @@ class AuthController extends Controller
 
         $user = User::where('email', $email)->first();
 
-        // Générer et envoyer le code
-        $code = PasswordResetCode::generateCode($email);
+        // Log the attempt
+        Log::info('Password reset code generation attempt', [
+            'email' => $email,
+            'user_id' => $user->id,
+            'ip' => $request->ip()
+        ]);
 
         try {
+            // Générer le code
+            $code = PasswordResetCode::generateCode($email);
+            
+            Log::info('Password reset code generated', [
+                'email' => $email,
+                'code_length' => strlen($code)
+            ]);
+
+            // Test mail configuration
+            $mailConfig = config('mail');
+            Log::info('Mail configuration', [
+                'default_mailer' => $mailConfig['default'],
+                'smtp_host' => $mailConfig['mailers']['smtp']['host'] ?? 'not set',
+                'smtp_port' => $mailConfig['mailers']['smtp']['port'] ?? 'not set',
+                'from_address' => $mailConfig['from']['address'] ?? 'not set'
+            ]);
+
+            // Envoyer l'email
             Mail::to($email)->send(new PasswordResetCodeMail($code, $user->name));
+            
+            Log::info('Password reset code email sent successfully', [
+                'email' => $email,
+                'user_id' => $user->id
+            ]);
             
             return redirect()->route('password.reset.form', ['email' => $email])
                 ->with('success', 'Un code de vérification a été envoyé à votre adresse email.');
+                
         } catch (\Exception $e) {
+            Log::error('Failed to send password reset code email', [
+                'email' => $email,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
             return redirect()->back()
-                ->withErrors(['email' => 'Erreur lors de l\'envoi de l\'email. Veuillez réessayer.'])
+                ->withErrors(['email' => 'Erreur lors de l\'envoi de l\'email: ' . $e->getMessage()])
                 ->withInput();
         }
     }
