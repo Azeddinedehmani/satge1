@@ -14,12 +14,14 @@ class PasswordResetCode extends Model
         'email',
         'code',
         'expires_at',
-        'used'
+        'used',
+        'attempts'  // ADD THIS LINE
     ];
 
     protected $casts = [
         'expires_at' => 'datetime',
         'used' => 'boolean',
+        'attempts' => 'integer'  // ADD THIS LINE
     ];
 
     /**
@@ -38,14 +40,15 @@ class PasswordResetCode extends Model
             'email' => $email,
             'code' => $code,
             'expires_at' => Carbon::now()->addMinutes(10),
-            'used' => false
+            'used' => false,
+            'attempts' => 0  // ADD THIS LINE
         ]);
 
         return $code;
     }
 
     /**
-     * Verify if the code is valid
+     * Verify if the code is valid (REPLACE YOUR EXISTING METHOD)
      */
     public static function verifyCode(string $email, string $code): bool
     {
@@ -61,7 +64,30 @@ class PasswordResetCode extends Model
             return true;
         }
 
+        // Increment failed attempts
+        self::where('email', $email)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->increment('attempts');
+
+        // Invalidate codes after 3 failed attempts
+        self::where('email', $email)
+            ->where('attempts', '>=', 3)
+            ->update(['used' => true]);
+
         return false;
+    }
+
+    /**
+     * Check if too many attempts (ADD THIS NEW METHOD)
+     */
+    public static function hasTooManyAttempts(string $email): bool
+    {
+        return self::where('email', $email)
+            ->where('used', false)
+            ->where('expires_at', '>', Carbon::now())
+            ->where('attempts', '>=', 3)
+            ->exists();
     }
 
     /**

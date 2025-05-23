@@ -7,22 +7,24 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use App\Models\User;
 use App\Models\PasswordResetCode;
 use App\Mail\PasswordResetCode as PasswordResetCodeMail;
 
 class AuthController extends Controller
 {
-   /**
- * Create a new AuthController instance.
- *
- * @return void
- */
-public function __construct()
-{
-    // Remplacer auth:api par auth (utilise le garde web par défaut)
-    $this->middleware('auth', ['except' => ['login', 'showLoginForm', 'showForgotPasswordForm', 'sendResetCode', 'showResetForm', 'resetPassword']]);
-}
+    /**
+     * Create a new AuthController instance.
+     *
+     * @return void
+     */
+    public function __construct()
+    {
+        // Remplacer auth:api par auth (utilise le garde web par défaut)
+        $this->middleware('auth', ['except' => ['login', 'showLoginForm', 'showForgotPasswordForm', 'sendResetCode', 'showResetForm', 'resetPassword']]);
+    }
 
     /**
      * Show login form
@@ -98,6 +100,19 @@ public function __construct()
         }
 
         $email = $request->email;
+        
+        // Rate limiting: max 3 attempts per hour per email
+        $key = 'password-reset-' . $email;
+        
+        if (RateLimiter::tooManyAttempts($key, 3)) {
+            $seconds = RateLimiter::availableIn($key);
+            return redirect()->back()
+                ->withErrors(['email' => "Trop de tentatives. Réessayez dans " . ceil($seconds/60) . " minutes."])
+                ->withInput();
+        }
+
+        RateLimiter::hit($key, 3600); // 1 hour window
+
         $user = User::where('email', $email)->first();
 
         // Générer et envoyer le code
@@ -153,8 +168,25 @@ public function __construct()
                 ->withInput($request->except('password', 'password_confirmation'));
         }
 
+        // Check for too many attempts
+        if (PasswordResetCode::hasTooManyAttempts($request->email)) {
+            Log::warning('Password reset blocked due to too many attempts', [
+                'email' => $request->email,
+                'ip' => $request->ip()
+            ]);
+            
+            return redirect()->back()
+                ->withErrors(['code' => 'Trop de tentatives incorrectes. Demandez un nouveau code.'])
+                ->withInput($request->except('password', 'password_confirmation'));
+        }
+
         // Vérifier le code
         if (!PasswordResetCode::verifyCode($request->email, $request->code)) {
+            Log::warning('Invalid password reset code attempted', [
+                'email' => $request->email,
+                'ip' => $request->ip()
+            ]);
+            
             return redirect()->back()
                 ->withErrors(['code' => 'Code de vérification invalide ou expiré.'])
                 ->withInput($request->except('password', 'password_confirmation'));
@@ -164,6 +196,13 @@ public function __construct()
         $user = User::where('email', $request->email)->first();
         $user->update([
             'password' => Hash::make($request->password)
+        ]);
+
+        // Log successful password reset
+        Log::info('Password reset successful', [
+            'user_id' => $user->id,
+            'email' => $request->email,
+            'ip' => $request->ip()
         ]);
 
         // Nettoyer les codes expirés
