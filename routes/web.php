@@ -17,8 +17,16 @@ use App\Http\Controllers\PurchaseController;
 |--------------------------------------------------------------------------
 */
 
-// Public routes
+// ROUTE RACINE CORRIGÉE
 Route::get('/', function () {
+    if (auth()->check()) {
+        $user = auth()->user();
+        if ($user->isAdmin()) {
+            return redirect()->route('admin.dashboard');
+        } else {
+            return redirect()->route('pharmacist.dashboard');
+        }
+    }
     return redirect()->route('login');
 });
 
@@ -29,7 +37,7 @@ Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
 // Password reset routes
 Route::get('/forgot-password', [AuthController::class, 'showForgotPasswordForm'])->name('password.forgot');
-Route::post('/forgot-password', [AuthController::class, 'sendResetCode'])->name('password.send-code');
+Route::post('/forgot-password', [AuthController::class, 'sendResetCode'])->name('password.send.code');
 Route::get('/reset-password', [AuthController::class, 'showResetForm'])->name('password.reset.form');
 Route::post('/reset-password', [AuthController::class, 'resetPassword'])->name('password.reset');
 
