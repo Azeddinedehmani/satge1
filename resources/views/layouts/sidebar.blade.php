@@ -42,10 +42,18 @@
             </li>
             
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-file-prescription"></i> Ordonnances
-                </a>
-            </li>
+    <a class="nav-link {{ request()->is('prescriptions*') ? 'active' : '' }}" href="{{ route('prescriptions.index') }}">
+        <i class="fas fa-file-prescription"></i> Ordonnances
+        @php
+            $pendingCount = \App\Models\Prescription::pending()->count();
+            $expiringCount = \App\Models\Prescription::active()->where('expiry_date', '<=', now()->addDays(7))->count();
+            $totalAlerts = $pendingCount + $expiringCount;
+        @endphp
+        @if($totalAlerts > 0)
+            <span class="badge bg-danger rounded-pill ms-2">{{ $totalAlerts }}</span>
+        @endif
+    </a>
+</li>
             
             @if(Auth::user()->isAdmin())
             <li class="nav-item">

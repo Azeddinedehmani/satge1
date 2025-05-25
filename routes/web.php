@@ -62,4 +62,9 @@ Route::middleware('auth')->group(function () {
     Route::resource('sales', SaleController::class);
     Route::get('sales/{id}/print', [SaleController::class, 'print'])->name('sales.print');
     Route::get('api/products/{id}', [SaleController::class, 'getProduct'])->name('api.products.show');
+    // Prescription management routes
+Route::resource('prescriptions', PrescriptionController::class);
+Route::get('prescriptions/{id}/print', [PrescriptionController::class, 'print'])->name('prescriptions.print');
+Route::get('prescriptions/{id}/deliver', [PrescriptionController::class, 'deliver'])->name('prescriptions.deliver');
+Route::post('prescriptions/{id}/deliver', [PrescriptionController::class, 'processDelivery'])->name('prescriptions.process-delivery');
 });
