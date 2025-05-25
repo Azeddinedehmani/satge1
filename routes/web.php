@@ -10,6 +10,7 @@ use App\Http\Controllers\SaleController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\PurchaseController;
+use App\Http\Controllers\ReportController; // NOUVEAU
 
 /*
 |--------------------------------------------------------------------------
@@ -47,6 +48,16 @@ Route::middleware('auth')->group(function () {
     // Dashboard routes
     Route::get('/admin/dashboard', [AdminController::class, 'index'])->name('admin.dashboard')->middleware('admin');
     Route::get('/pharmacist/dashboard', [PharmacistController::class, 'index'])->name('pharmacist.dashboard')->middleware('pharmacist');
+    
+    // NOUVEAU : Routes des rapports (accessible à tous les utilisateurs connectés)
+    Route::prefix('reports')->name('reports.')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('index');
+        Route::get('/sales', [ReportController::class, 'sales'])->name('sales');
+        Route::get('/inventory', [ReportController::class, 'inventory'])->name('inventory');
+        Route::get('/clients', [ReportController::class, 'clients'])->name('clients');
+        Route::get('/prescriptions', [ReportController::class, 'prescriptions'])->name('prescriptions');
+        Route::get('/financial', [ReportController::class, 'financial'])->name('financial');
+    });
     
     // Inventory management routes (all authenticated users)
     Route::resource('inventory', ProductController::class)->names([
