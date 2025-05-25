@@ -53,12 +53,9 @@ class Sale extends Model
         
         static::creating(function ($sale) {
             if (!$sale->sale_number) {
-                $sale->sale_number = 'VTE-' . date('Ymd') . '-' . str_pad(
-                    Sale::whereDate('created_at', today())->count() + 1, 
-                    4, 
-                    '0', 
-                    STR_PAD_LEFT
-                );
+                // Generate a unique sale number
+                $todaySalesCount = Sale::whereDate('created_at', today())->count();
+                $sale->sale_number = 'VTE-' . date('Ymd') . '-' . str_pad($todaySalesCount + 1, 4, '0', STR_PAD_LEFT);
             }
             
             if (!$sale->sale_date) {
@@ -107,7 +104,7 @@ class Sale extends Model
     {
         $this->subtotal = $this->saleItems()->sum('total_price');
         $this->tax_amount = $this->subtotal * 0.20; // 20% tax
-        $this->total_amount = $this->subtotal + $this->tax_amount - $this->discount_amount;
+        $this->total_amount = $this->subtotal + $this->tax_amount - ($this->discount_amount ?? 0);
         $this->save();
     }
 
@@ -122,5 +119,75 @@ class Sale extends Model
             'failed' => 'bg-danger',
             default => 'bg-secondary'
         };
+    }
+
+    /**
+     * Get payment method label.
+     */
+    public function getPaymentMethodLabelAttribute()
+    {
+        return match($this->payment_method) {
+            'cash' => 'Espèces',
+            'card' => 'Carte bancaire',
+            'insurance' => 'Assurance',
+            'other' => 'Autre',
+            default => ucfirst($this->payment_method)
+        };
+    }
+
+    /**
+     * Get payment status label.
+     */
+    public function getPaymentStatusLabelAttribute()
+    {
+        return match($this->payment_status) {
+            'paid' => 'Payé',
+            'pending' => 'En attente',
+            'failed' => 'Échoué',
+            default => ucfirst($this->payment_status)
+        };
+    }
+
+    /**
+     * Check if sale has prescription products.
+     */
+    public function hasPrescriptionProducts()
+    {
+        return $this->saleItems()
+                   ->whereHas('product', function($query) {
+                       $query->where('prescription_required', true);
+                   })->exists();
+    }
+
+    /**
+     * Get total items count.
+     */
+    public function getTotalItemsAttribute()
+    {
+        return $this->saleItems()->sum('quantity');
+    }
+
+    /**
+     * Scope for today's sales.
+     */
+    public function scopeToday($query)
+    {
+        return $query->whereDate('sale_date', today());
+    }
+
+    /**
+     * Scope for sales with prescription.
+     */
+    public function scopeWithPrescription($query)
+    {
+        return $query->where('has_prescription', true);
+    }
+
+    /**
+     * Scope for paid sales.
+     */
+    public function scopePaid($query)
+    {
+        return $query->where('payment_status', 'paid');
     }
 }

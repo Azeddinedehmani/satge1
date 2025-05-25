@@ -42,6 +42,27 @@ class Prescription extends Model
     public function isExpired() { return $this->expiry_date->isPast(); }
     public function isAboutToExpire($days = 7) { return $this->expiry_date->diffInDays(now()) <= $days && !$this->isExpired(); }
 
+    // AJOUT DES MÉTHODES MANQUANTES
+    public function isFullyDelivered()
+    {
+        return $this->prescriptionItems()->where('quantity_delivered', '<', 'quantity_prescribed')->count() === 0;
+    }
+
+    public function isPartiallyDelivered()
+    {
+        return $this->prescriptionItems()->where('quantity_delivered', '>', 0)->count() > 0 && !$this->isFullyDelivered();
+    }
+
+    public function getDeliveryProgressAttribute()
+    {
+        $totalPrescribed = $this->prescriptionItems()->sum('quantity_prescribed');
+        $totalDelivered = $this->prescriptionItems()->sum('quantity_delivered');
+        
+        if ($totalPrescribed == 0) return 0;
+        
+        return round(($totalDelivered / $totalPrescribed) * 100, 1);
+    }
+
     public function updateStatus()
     {
         if ($this->isExpired()) {

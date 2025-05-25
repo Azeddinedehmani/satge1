@@ -40,19 +40,22 @@ class SaleItem extends Model
     {
         parent::boot();
         
-        static::saving(function ($saleItem) {
-            $saleItem->total_price = $saleItem->quantity * $saleItem->unit_price;
+        static::creating(function ($saleItem) {
+            // Calculate total price if not already set
+            if (!$saleItem->total_price) {
+                $saleItem->total_price = $saleItem->quantity * $saleItem->unit_price;
+            }
         });
 
-        static::saved(function ($saleItem) {
-            // Update sale totals when sale item is saved
-            $saleItem->sale->calculateTotals();
+        static::updating(function ($saleItem) {
+            // Recalculate total price if quantity or unit_price changed
+            if ($saleItem->isDirty(['quantity', 'unit_price'])) {
+                $saleItem->total_price = $saleItem->quantity * $saleItem->unit_price;
+            }
         });
 
-        static::deleted(function ($saleItem) {
-            // Update sale totals when sale item is deleted
-            $saleItem->sale->calculateTotals();
-        });
+        // Note: We don't auto-update sale totals here to avoid infinite loops
+        // The controller should handle updating sale totals after all items are processed
     }
 
     /**
@@ -69,5 +72,43 @@ class SaleItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * Get the line total (alias for total_price for compatibility).
+     */
+    public function getLineTotalAttribute()
+    {
+        return $this->total_price;
+    }
+
+    /**
+     * Calculate savings if there was a discount.
+     */
+    public function getSavingsAttribute()
+    {
+        $regularPrice = $this->quantity * $this->product->selling_price;
+        return $regularPrice - $this->total_price;
+    }
+
+    /**
+     * Check if this item has a discount.
+     */
+    public function hasDiscount()
+    {
+        return $this->unit_price < $this->product->selling_price;
+    }
+
+    /**
+     * Get discount percentage.
+     */
+    public function getDiscountPercentageAttribute()
+    {
+        if (!$this->hasDiscount()) {
+            return 0;
+        }
+        
+        $originalPrice = $this->product->selling_price;
+        return round((($originalPrice - $this->unit_price) / $originalPrice) * 100, 2);
     }
 }

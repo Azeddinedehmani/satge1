@@ -18,6 +18,9 @@ class DatabaseSeeder extends Seeder
             ProductSeeder::class,
             ClientSeeder::class,
             SaleSeeder::class,
+            PrescriptionSeeder::class, // AJOUT DU SEEDER POUR LES PRESCRIPTIONS
+
+            
         ]);
     }
 }

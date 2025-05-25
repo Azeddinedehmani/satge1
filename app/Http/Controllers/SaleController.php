@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Client;
@@ -62,8 +63,9 @@ class SaleController extends Controller
         $sales = $query->latest('sale_date')->paginate(15);
         
         // Calculate summary statistics
-        $totalSales = $query->sum('total_amount');
-        $salesCount = $query->count();
+        $allSales = Sale::all();
+        $totalSales = $allSales->sum('total_amount');
+        $salesCount = $allSales->count();
         $averageSale = $salesCount > 0 ? $totalSales / $salesCount : 0;
         
         return view('sales.index', compact('sales', 'totalSales', 'salesCount', 'averageSale'));
@@ -72,12 +74,15 @@ class SaleController extends Controller
     /**
      * Show the form for creating a new sale.
      */
-    public function create()
+    public function create(Request $request)
     {
         $clients = Client::active()->orderBy('first_name')->get();
         $products = Product::where('stock_quantity', '>', 0)->orderBy('name')->get();
         
-        return view('sales.create', compact('clients', 'products'));
+        // Pre-select client if passed in URL
+        $selectedClientId = $request->get('client_id');
+        
+        return view('sales.create', compact('clients', 'products', 'selectedClientId'));
     }
 
     /**
@@ -85,6 +90,11 @@ class SaleController extends Controller
      */
     public function store(Request $request)
     {
+        Log::info('Sale creation attempt', [
+            'user_id' => auth()->id(),
+            'request_data' => $request->all()
+        ]);
+
         $validator = Validator::make($request->all(), [
             'client_id' => 'nullable|exists:clients,id',
             'payment_method' => 'required|in:cash,card,insurance,other',
@@ -95,22 +105,46 @@ class SaleController extends Controller
             'products' => 'required|array|min:1',
             'products.*.id' => 'required|exists:products,id',
             'products.*.quantity' => 'required|integer|min:1',
+        ], [
+            'products.required' => 'Veuillez ajouter au moins un produit à la vente.',
+            'products.*.id.required' => 'ID produit manquant.',
+            'products.*.id.exists' => 'Un des produits sélectionnés n\'existe pas.',
+            'products.*.quantity.required' => 'Quantité manquante pour un produit.',
+            'products.*.quantity.min' => 'La quantité doit être d\'au moins 1.',
         ]);
 
         if ($validator->fails()) {
+            Log::warning('Sale creation validation failed', [
+                'errors' => $validator->errors()->toArray(),
+                'request_data' => $request->all()
+            ]);
+            
             return redirect()->back()
                 ->withErrors($validator)
                 ->withInput();
         }
 
-        // Validate stock availability
-        foreach ($request->products as $productData) {
-            $product = Product::find($productData['id']);
-            if ($product->stock_quantity < $productData['quantity']) {
+        // Validate stock availability and prepare product data
+        $productData = [];
+        foreach ($request->products as $item) {
+            $product = Product::find($item['id']);
+            if (!$product) {
                 return redirect()->back()
-                    ->withErrors(['products' => "Stock insuffisant pour {$product->name}. Stock disponible: {$product->stock_quantity}"])
+                    ->withErrors(['products' => "Produit avec l'ID {$item['id']} introuvable."])
                     ->withInput();
             }
+            
+            $quantity = (int) $item['quantity'];
+            if ($product->stock_quantity < $quantity) {
+                return redirect()->back()
+                    ->withErrors(['products' => "Stock insuffisant pour {$product->name}. Stock disponible: {$product->stock_quantity}, demandé: {$quantity}"])
+                    ->withInput();
+            }
+            
+            $productData[] = [
+                'product' => $product,
+                'quantity' => $quantity
+            ];
         }
 
         DB::beginTransaction();
@@ -127,25 +161,45 @@ class SaleController extends Controller
             $sale->discount_amount = $request->discount_amount ?? 0;
             $sale->notes = $request->notes;
             $sale->sale_date = now();
+            
+            // Calculate totals before saving
+            $subtotal = 0;
+            foreach ($productData as $item) {
+                $subtotal += $item['product']->selling_price * $item['quantity'];
+            }
+            
+            $sale->subtotal = $subtotal;
+            $sale->tax_amount = $subtotal * 0.20; // 20% tax
+            $sale->total_amount = $subtotal + $sale->tax_amount - $sale->discount_amount;
+            
             $sale->save();
 
+            Log::info('Sale created successfully', [
+                'sale_id' => $sale->id,
+                'sale_number' => $sale->sale_number,
+                'total_amount' => $sale->total_amount
+            ]);
+
             // Create sale items and update stock
-            foreach ($request->products as $productData) {
-                $product = Product::find($productData['id']);
-                
+            foreach ($productData as $item) {
                 $saleItem = new SaleItem();
                 $saleItem->sale_id = $sale->id;
-                $saleItem->product_id = $product->id;
-                $saleItem->quantity = $productData['quantity'];
-                $saleItem->unit_price = $product->selling_price;
+                $saleItem->product_id = $item['product']->id;
+                $saleItem->quantity = $item['quantity'];
+                $saleItem->unit_price = $item['product']->selling_price;
+                $saleItem->total_price = $item['product']->selling_price * $item['quantity'];
                 $saleItem->save();
 
                 // Update product stock
-                $product->decrement('stock_quantity', $productData['quantity']);
+                $item['product']->decrement('stock_quantity', $item['quantity']);
+                
+                Log::info('Product stock updated', [
+                    'product_id' => $item['product']->id,
+                    'product_name' => $item['product']->name,
+                    'quantity_sold' => $item['quantity'],
+                    'remaining_stock' => $item['product']->fresh()->stock_quantity
+                ]);
             }
-
-            // Calculate totals
-            $sale->calculateTotals();
 
             DB::commit();
 
@@ -155,8 +209,14 @@ class SaleController extends Controller
         } catch (\Exception $e) {
             DB::rollback();
             
+            Log::error('Sale creation failed', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
+            
             return redirect()->back()
-                ->withErrors(['error' => 'Erreur lors de l\'enregistrement de la vente: ' . $e->getMessage()])
+                ->withErrors(['error' => 'Erreur lors de l\'enregistrement de la vente. Veuillez réessayer.'])
                 ->withInput();
         }
     }
