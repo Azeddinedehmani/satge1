@@ -42,26 +42,33 @@
             </li>
             
             <li class="nav-item">
-    <a class="nav-link {{ request()->is('prescriptions*') ? 'active' : '' }}" href="{{ route('prescriptions.index') }}">
-        <i class="fas fa-file-prescription"></i> Ordonnances
-        @php
-            $pendingCount = \App\Models\Prescription::pending()->count();
-            $expiringCount = \App\Models\Prescription::active()->where('expiry_date', '<=', now()->addDays(7))->count();
-            $totalAlerts = $pendingCount + $expiringCount;
-        @endphp
-        @if($totalAlerts > 0)
-            <span class="badge bg-danger rounded-pill ms-2">{{ $totalAlerts }}</span>
-        @endif
-    </a>
-</li>
-            
-            @if(Auth::user()->isAdmin())
-            <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-truck"></i> Fournisseurs
+                <a class="nav-link {{ request()->is('prescriptions*') ? 'active' : '' }}" href="{{ route('prescriptions.index') }}">
+                    <i class="fas fa-file-prescription"></i> Ordonnances
+                    @php
+                        $pendingCount = \App\Models\Prescription::pending()->count();
+                        $expiringCount = \App\Models\Prescription::active()->where('expiry_date', '<=', now()->addDays(7))->count();
+                        $totalAlerts = $pendingCount + $expiringCount;
+                    @endphp
+                    @if($totalAlerts > 0)
+                        <span class="badge bg-danger rounded-pill ms-2">{{ $totalAlerts }}</span>
+                    @endif
                 </a>
             </li>
             
+            <!-- MISE À JOUR : Lien vers les fournisseurs pour tous les utilisateurs -->
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('suppliers*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
+                    <i class="fas fa-truck"></i> Fournisseurs
+                    @php
+                        $inactiveSuppliers = \App\Models\Supplier::where('active', false)->count();
+                    @endphp
+                    @if($inactiveSuppliers > 0)
+                        <span class="badge bg-warning text-dark rounded-pill ms-2">{{ $inactiveSuppliers }}</span>
+                    @endif
+                </a>
+            </li>
+            
+            @if(Auth::user()->isAdmin())
             <li class="nav-item">
                 <a class="nav-link" href="#">
                     <i class="fas fa-shopping-cart"></i> Achats

@@ -25,11 +25,11 @@
     </div>
     <div class="card-body">
         <form action="{{ route('inventory.index') }}" method="GET" class="row g-3">
-            <div class="col-md-4">
+            <div class="col-md-3">
                 <label for="search" class="form-label">Recherche</label>
                 <input type="text" class="form-control" id="search" name="search" placeholder="Nom, code barre..." value="{{ request('search') }}">
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
                 <label for="category" class="form-label">Catégorie</label>
                 <select class="form-select" id="category" name="category">
                     <option value="">Toutes les catégories</option>
@@ -40,7 +40,18 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-md-3">
+            <div class="col-md-2">
+                <label for="supplier" class="form-label">Fournisseur</label>
+                <select class="form-select" id="supplier" name="supplier">
+                    <option value="">Tous les fournisseurs</option>
+                    @foreach(\App\Models\Supplier::where('active', true)->get() as $supplier)
+                        <option value="{{ $supplier->id }}" {{ request('supplier') == $supplier->id ? 'selected' : '' }}>
+                            {{ $supplier->name }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-2">
                 <label for="stock_status" class="form-label">État du stock</label>
                 <select class="form-select" id="stock_status" name="stock_status">
                     <option value="">Tous les produits</option>
@@ -48,7 +59,7 @@
                     <option value="out" {{ request('stock_status') == 'out' ? 'selected' : '' }}>Rupture de stock</option>
                 </select>
             </div>
-            <div class="col-md-2 d-flex align-items-end">
+            <div class="col-md-1 d-flex align-items-end">
                 <button type="submit" class="btn btn-primary w-100">
                     <i class="fas fa-search me-1"></i> Filtrer
                 </button>

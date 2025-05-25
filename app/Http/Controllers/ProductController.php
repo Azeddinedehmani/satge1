@@ -26,51 +26,67 @@ class ProductController extends Controller
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function index(Request $request)
-    {
-        $query = Product::with(['category', 'supplier']);
+    // Et ajoutez aussi le filtre dans le contrôleur ProductController::index() :
 
-        // Recherche
-        if ($request->has('search') && !empty($request->search)) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('barcode', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
+public function index(Request $request)
+{
+    $query = Product::with(['category', 'supplier']);
 
-        // Filtre par catégorie
-        if ($request->has('category') && $request->category != '') {
-            $query->where('category_id', $request->category);
-        }
-
-        // Filtre par stock
-        if ($request->has('stock_status') && !empty($request->stock_status)) {
-            if ($request->stock_status == 'low') {
-                $query->whereColumn('stock_quantity', '<=', 'stock_threshold');
-            } elseif ($request->stock_status == 'out') {
-                $query->where('stock_quantity', '<=', 0);
-            }
-        }
-
-        $products = $query->paginate(10);
-        $categories = Category::all();
-        
-        return view('inventory.index', compact('products', 'categories'));
+    // Recherche
+    if ($request->has('search') && !empty($request->search)) {
+        $search = $request->search;
+        $query->where(function($q) use ($search) {
+            $q->where('name', 'like', "%{$search}%")
+              ->orWhere('barcode', 'like', "%{$search}%")
+              ->orWhere('description', 'like', "%{$search}%");
+        });
     }
+
+    // Filtre par catégorie
+    if ($request->has('category') && $request->category != '') {
+        $query->where('category_id', $request->category);
+    }
+
+    // NOUVEAU : Filtre par fournisseur
+    if ($request->has('supplier') && $request->supplier != '') {
+        $query->where('supplier_id', $request->supplier);
+    }
+
+    // Filtre par stock
+    if ($request->has('stock_status') && !empty($request->stock_status)) {
+        if ($request->stock_status == 'low') {
+            $query->whereColumn('stock_quantity', '<=', 'stock_threshold');
+        } elseif ($request->stock_status == 'out') {
+            $query->where('stock_quantity', '<=', 0);
+        }
+    }
+
+    $products = $query->paginate(10);
+    $categories = Category::all();
+    
+    return view('inventory.index', compact('products', 'categories'));
+}
 
     /**
      * Show the form for creating a new product.
      *
      * @return \Illuminate\Contracts\Support\Renderable
      */
-    public function create()
-    {
-        $categories = Category::all();
-        $suppliers = Supplier::all();
-        return view('inventory.create', compact('categories', 'suppliers'));
-    }
+   // Remplacez la méthode create() dans ProductController par :
+
+/**
+ * Show the form for creating a new product.
+ *
+ * @return \Illuminate\Contracts\Support\Renderable
+ */
+public function create(Request $request)
+{
+    $categories = Category::all();
+    $suppliers = Supplier::where('active', true)->get(); // Seuls les fournisseurs actifs
+    $selectedSupplierId = $request->get('supplier_id'); // Pré-sélection du fournisseur
+    
+    return view('inventory.create', compact('categories', 'suppliers', 'selectedSupplierId'));
+}
 
     /**
      * Store a newly created product in storage.

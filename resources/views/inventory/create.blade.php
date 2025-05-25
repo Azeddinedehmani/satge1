@@ -99,21 +99,21 @@
                 </div>
             </div>
             
-            <div class="row mb-3">
-                <div class="col-md-6">
-                    <label for="supplier_id" class="form-label">Fournisseur</label>
-                    <select class="form-select @error('supplier_id') is-invalid @enderror" id="supplier_id" name="supplier_id">
-                        <option value="">Sélectionner un fournisseur</option>
-                        @foreach($suppliers as $supplier)
-                            <option value="{{ $supplier->id }}" {{ old('supplier_id') == $supplier->id ? 'selected' : '' }}>
-                                {{ $supplier->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                    @error('supplier_id')
-                        <div class="invalid-feedback">{{ $message }}</div>
-                    @enderror
-                </div>
+            <div class="col-md-6">
+    <label for="supplier_id" class="form-label">Fournisseur</label>
+    <select class="form-select @error('supplier_id') is-invalid @enderror" id="supplier_id" name="supplier_id">
+        <option value="">Sélectionner un fournisseur</option>
+        @foreach($suppliers as $supplier)
+            <option value="{{ $supplier->id }}" 
+                    {{ old('supplier_id', $selectedSupplierId ?? '') == $supplier->id ? 'selected' : '' }}>
+                {{ $supplier->name }}
+            </option>
+        @endforeach
+    </select>
+    @error('supplier_id')
+        <div class="invalid-feedback">{{ $message }}</div>
+    @enderror
+</div>
                 
                 <div class="col-md-6">
                     <label for="location" class="form-label">Emplacement</label>

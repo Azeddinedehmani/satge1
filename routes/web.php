@@ -8,6 +8,7 @@ use App\Http\Controllers\ProductController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\SaleController;
 use App\Http\Controllers\PrescriptionController;
+use App\Http\Controllers\SupplierController; // AJOUT
 
 /*
 |--------------------------------------------------------------------------
@@ -114,6 +115,17 @@ Route::middleware('auth')->group(function () {
     Route::get('prescriptions/{id}/print', [PrescriptionController::class, 'print'])->name('prescriptions.print');
     Route::get('prescriptions/{id}/deliver', [PrescriptionController::class, 'deliver'])->name('prescriptions.deliver');
     Route::post('prescriptions/{id}/deliver', [PrescriptionController::class, 'processDelivery'])->name('prescriptions.process-delivery');
+
+    // NOUVEAU : Supplier management routes (accessible by both admin and pharmacist, but admin only for CUD operations)
+    Route::resource('suppliers', SupplierController::class)->names([
+        'index' => 'suppliers.index',
+        'create' => 'suppliers.create',
+        'store' => 'suppliers.store',
+        'show' => 'suppliers.show',
+        'edit' => 'suppliers.edit',
+        'update' => 'suppliers.update',
+        'destroy' => 'suppliers.destroy'
+    ]);
 
     // Development and debugging routes (remove in production)
     if (config('app.debug')) {
