@@ -55,7 +55,6 @@
                 </a>
             </li>
             
-            <!-- MISE À JOUR : Lien vers les fournisseurs pour tous les utilisateurs -->
             <li class="nav-item">
                 <a class="nav-link {{ request()->is('suppliers*') ? 'active' : '' }}" href="{{ route('suppliers.index') }}">
                     <i class="fas fa-truck"></i> Fournisseurs
@@ -70,8 +69,16 @@
             
             @if(Auth::user()->isAdmin())
             <li class="nav-item">
-                <a class="nav-link" href="#">
+                <a class="nav-link {{ request()->is('purchases*') ? 'active' : '' }}" href="{{ route('purchases.index') }}">
                     <i class="fas fa-shopping-cart"></i> Achats
+                    @php
+                        $pendingPurchases = \App\Models\Purchase::pending()->count();
+                        $overduePurchases = \App\Models\Purchase::overdue()->count();
+                        $totalPurchaseAlerts = $pendingPurchases + $overduePurchases;
+                    @endphp
+                    @if($totalPurchaseAlerts > 0)
+                        <span class="badge bg-info rounded-pill ms-2">{{ $totalPurchaseAlerts }}</span>
+                    @endif
                 </a>
             </li>
             
