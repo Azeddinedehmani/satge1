@@ -19,6 +19,17 @@
     </div>
 @endif
 
+@if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
 <!-- Statistiques -->
 <div class="row mb-4">
     <div class="col-md-3">
@@ -189,6 +200,9 @@
                             </td>
                             <td>
                                 {{ $sale->sale_date->format('d/m/Y H:i') }}
+                                @if($sale->sale_date < now()->subDays(7))
+                                    <br><small class="text-muted">Ancienne</small>
+                                @endif
                             </td>
                             <td>
                                 <div class="btn-group">
@@ -203,7 +217,68 @@
                                             <i class="fas fa-edit"></i>
                                         </a>
                                     @endif
+                                    @if($sale->sale_date >= now()->subDays(7) && Auth::user()->isAdmin())
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $sale->id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    @endif
                                 </div>
+                                
+                                @if($sale->sale_date >= now()->subDays(7) && Auth::user()->isAdmin())
+                                    <!-- Modal de confirmation de suppression -->
+                                    <div class="modal fade" id="deleteModal{{ $sale->id }}" tabindex="-1">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title">Confirmer la suppression</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="alert alert-warning">
+                                                        <strong><i class="fas fa-exclamation-triangle me-1"></i>Attention!</strong>
+                                                        Cette action est irréversible.
+                                                    </div>
+                                                    <p>Êtes-vous sûr de vouloir supprimer la vente <strong>{{ $sale->sale_number }}</strong>?</p>
+                                                    <p><strong>Conséquences :</strong></p>
+                                                    <ul>
+                                                        <li>La vente sera définitivement supprimée</li>
+                                                        <li>Le stock des produits sera restauré</li>
+                                                        <li>Cette action ne peut pas être annulée</li>
+                                                    </ul>
+                                                    
+                                                    <div class="table-responsive">
+                                                        <table class="table table-sm">
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Produit</th>
+                                                                    <th>Quantité</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                @foreach($sale->saleItems as $item)
+                                                                    <tr>
+                                                                        <td>{{ $item->product->name }}</td>
+                                                                        <td>{{ $item->quantity }}</td>
+                                                                    </tr>
+                                                                @endforeach
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                                                    <form action="{{ route('sales.destroy', $sale->id) }}" method="POST" style="display: inline;">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash me-1"></i>Supprimer définitivement
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endif
                             </td>
                         </tr>
                     @empty

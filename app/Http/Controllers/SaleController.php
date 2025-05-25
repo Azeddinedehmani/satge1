@@ -268,6 +268,65 @@ class SaleController extends Controller
     }
 
     /**
+     * Remove the specified sale from storage.
+     */
+    public function destroy($id)
+    {
+        $sale = Sale::with(['saleItems.product'])->findOrFail($id);
+        
+        // Vérifier si la vente peut être supprimée
+        if ($sale->sale_date < now()->subDays(7)) {
+            return redirect()->route('sales.index')
+                ->withErrors(['error' => 'Impossible de supprimer une vente de plus de 7 jours.']);
+        }
+
+        DB::beginTransaction();
+        
+        try {
+            // Restaurer le stock des produits
+            foreach ($sale->saleItems as $item) {
+                $item->product->increment('stock_quantity', $item->quantity);
+                
+                Log::info('Stock restored for product', [
+                    'product_id' => $item->product->id,
+                    'product_name' => $item->product->name,
+                    'quantity_restored' => $item->quantity,
+                    'new_stock' => $item->product->fresh()->stock_quantity
+                ]);
+            }
+            
+            // Supprimer les items de vente
+            $sale->saleItems()->delete();
+            
+            // Supprimer la vente
+            $sale->delete();
+            
+            DB::commit();
+            
+            Log::info('Sale deleted successfully', [
+                'sale_id' => $id,
+                'sale_number' => $sale->sale_number,
+                'deleted_by' => auth()->id()
+            ]);
+
+            return redirect()->route('sales.index')
+                ->with('success', 'Vente supprimée avec succès! Le stock a été restauré.');
+                
+        } catch (\Exception $e) {
+            DB::rollback();
+            
+            Log::error('Sale deletion failed', [
+                'sale_id' => $id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            
+            return redirect()->route('sales.index')
+                ->withErrors(['error' => 'Erreur lors de la suppression de la vente. Veuillez réessayer.']);
+        }
+    }
+
+    /**
      * Get product details for AJAX requests.
      */
     public function getProduct($id)

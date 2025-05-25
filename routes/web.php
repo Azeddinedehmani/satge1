@@ -73,21 +73,20 @@ Route::middleware('auth')->group(function () {
     Route::post('prescriptions/{id}/deliver', [PrescriptionController::class, 'processDelivery'])->name('prescriptions.process-delivery');
     Route::get('prescriptions/{id}/print', [PrescriptionController::class, 'print'])->name('prescriptions.print');
     
-    // Supplier management routes (all authenticated users can view, only admins can modify)
-    Route::get('suppliers', [SupplierController::class, 'index'])->name('suppliers.index');
-    Route::get('suppliers/{id}', [SupplierController::class, 'show'])->name('suppliers.show');
-    
-    // Admin-only supplier management routes
+    // Admin-only routes
     Route::middleware('admin')->group(function () {
-        Route::get('suppliers/create', [SupplierController::class, 'create'])->name('suppliers.create');
-        Route::post('suppliers', [SupplierController::class, 'store'])->name('suppliers.store');
-        Route::get('suppliers/{id}/edit', [SupplierController::class, 'edit'])->name('suppliers.edit');
-        Route::put('suppliers/{id}', [SupplierController::class, 'update'])->name('suppliers.update');
-        Route::delete('suppliers/{id}', [SupplierController::class, 'destroy'])->name('suppliers.destroy');
-    });
-    
-    // Purchase management routes (admin only)
-    Route::middleware('admin')->group(function () {
+        // Supplier management routes (ADMIN UNIQUEMENT)
+        Route::resource('suppliers', SupplierController::class)->names([
+            'index' => 'suppliers.index',
+            'create' => 'suppliers.create',
+            'store' => 'suppliers.store',
+            'show' => 'suppliers.show',
+            'edit' => 'suppliers.edit',
+            'update' => 'suppliers.update',
+            'destroy' => 'suppliers.destroy'
+        ]);
+        
+        // Purchase management routes (admin only)
         Route::resource('purchases', PurchaseController::class)->names([
             'index' => 'purchases.index',
             'create' => 'purchases.create',

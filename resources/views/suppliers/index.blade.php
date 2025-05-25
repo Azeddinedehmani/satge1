@@ -6,11 +6,9 @@
         <h2>Gestion des fournisseurs</h2>
     </div>
     <div class="col-md-4 text-end">
-        @if(Auth::user()->isAdmin())
-            <a href="{{ route('suppliers.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> Ajouter un fournisseur
-            </a>
-        @endif
+        <a href="{{ route('suppliers.create') }}" class="btn btn-primary">
+            <i class="fas fa-plus me-1"></i> Ajouter un fournisseur
+        </a>
     </div>
 </div>
 
@@ -179,19 +177,17 @@
                                     <a href="{{ route('suppliers.show', $supplier->id) }}" class="btn btn-sm btn-info text-white">
                                         <i class="fas fa-eye"></i>
                                     </a>
-                                    @if(Auth::user()->isAdmin())
-                                        <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        @if($supplier->products_count == 0)
-                                            <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $supplier->id }}">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
-                                        @endif
+                                    <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-sm btn-primary">
+                                        <i class="fas fa-edit"></i>
+                                    </a>
+                                    @if($supplier->products_count == 0)
+                                        <button type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal{{ $supplier->id }}">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
                                     @endif
                                 </div>
                                 
-                                @if(Auth::user()->isAdmin() && $supplier->products_count == 0)
+                                @if($supplier->products_count == 0)
                                     <!-- Modal de confirmation de suppression -->
                                     <div class="modal fade" id="deleteModal{{ $supplier->id }}" tabindex="-1">
                                         <div class="modal-dialog">
@@ -202,13 +198,19 @@
                                                 </div>
                                                 <div class="modal-body">
                                                     Êtes-vous sûr de vouloir supprimer le fournisseur <strong>{{ $supplier->name }}</strong>?
+                                                    <div class="alert alert-warning mt-3">
+                                                        <i class="fas fa-exclamation-triangle me-2"></i>
+                                                        Cette action est irréversible.
+                                                    </div>
                                                 </div>
                                                 <div class="modal-footer">
                                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                                                    <form action="{{ route('suppliers.destroy', $supplier->id) }}" method="POST">
+                                                    <form action="{{ route('suppliers.destroy', $supplier->id) }}" method="POST" style="display: inline;">
                                                         @csrf
                                                         @method('DELETE')
-                                                        <button type="submit" class="btn btn-danger">Supprimer</button>
+                                                        <button type="submit" class="btn btn-danger">
+                                                            <i class="fas fa-trash me-1"></i> Supprimer
+                                                        </button>
                                                     </form>
                                                 </div>
                                             </div>

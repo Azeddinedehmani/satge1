@@ -14,7 +14,7 @@ class SupplierController extends Controller
     public function __construct()
     {
         $this->middleware('auth');
-        $this->middleware('admin')->except(['index', 'show']); // Seuls les admins peuvent créer/modifier/supprimer
+        // Plus besoin de middleware admin ici car déjà appliqué dans les routes
     }
 
     /**
@@ -151,9 +151,10 @@ class SupplierController extends Controller
                 ->withErrors(['error' => 'Impossible de supprimer ce fournisseur car il a des produits associés.']);
         }
         
+        $supplierName = $supplier->name;
         $supplier->delete();
 
         return redirect()->route('suppliers.index')
-            ->with('success', 'Fournisseur supprimé avec succès!');
+            ->with('success', "Fournisseur '{$supplierName}' supprimé avec succès!");
     }
 }

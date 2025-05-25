@@ -9,11 +9,9 @@
         <a href="{{ route('suppliers.index') }}" class="btn btn-secondary me-2">
             <i class="fas fa-arrow-left me-1"></i> Retour
         </a>
-        @if(Auth::user()->isAdmin())
-            <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-primary">
-                <i class="fas fa-edit me-1"></i> Modifier
-            </a>
-        @endif
+        <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-primary">
+            <i class="fas fa-edit me-1"></i> Modifier
+        </a>
     </div>
 </div>
 
@@ -189,28 +187,34 @@
             </div>
         </div>
 
-        @if(Auth::user()->isAdmin())
-            <div class="card mb-4">
-                <div class="card-header bg-light">
-                    <h5 class="card-title mb-0">Actions rapides</h5>
-                </div>
-                <div class="card-body">
-                    <div class="d-grid gap-2">
-                        <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-primary">
-                            <i class="fas fa-edit me-1"></i> Modifier les informations
+        <div class="card mb-4">
+            <div class="card-header bg-light">
+                <h5 class="card-title mb-0">Actions rapides</h5>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <a href="{{ route('suppliers.edit', $supplier->id) }}" class="btn btn-primary">
+                        <i class="fas fa-edit me-1"></i> Modifier les informations
+                    </a>
+                    <a href="{{ route('inventory.create', ['supplier_id' => $supplier->id]) }}" class="btn btn-success">
+                        <i class="fas fa-plus me-1"></i> Ajouter un produit
+                    </a>
+                    @if($totalProducts > 0)
+                        <a href="{{ route('inventory.index', ['supplier' => $supplier->id]) }}" class="btn btn-outline-primary">
+                            <i class="fas fa-boxes me-1"></i> Voir tous les produits
                         </a>
-                        <a href="{{ route('inventory.create', ['supplier_id' => $supplier->id]) }}" class="btn btn-success">
-                            <i class="fas fa-plus me-1"></i> Ajouter un produit
-                        </a>
-                        @if($totalProducts > 0)
-                            <a href="{{ route('inventory.index', ['supplier' => $supplier->id]) }}" class="btn btn-outline-primary">
-                                <i class="fas fa-boxes me-1"></i> Voir tous les produits
-                            </a>
-                        @endif
-                    </div>
+                    @endif
+                    <a href="{{ route('purchases.create', ['supplier_id' => $supplier->id]) }}" class="btn btn-outline-success">
+                        <i class="fas fa-shopping-cart me-1"></i> Nouvelle commande
+                    </a>
+                    @if($supplier->products_count == 0)
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                            <i class="fas fa-trash me-1"></i> Supprimer le fournisseur
+                        </button>
+                    @endif
                 </div>
             </div>
-        @endif
+        </div>
 
         @if($supplier->contact_person || $supplier->phone_number || $supplier->email)
             <div class="card">
@@ -237,4 +241,35 @@
         @endif
     </div>
 </div>
+
+@if($supplier->products_count == 0)
+    <!-- Modal de confirmation de suppression -->
+    <div class="modal fade" id="deleteModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirmer la suppression</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Êtes-vous sûr de vouloir supprimer le fournisseur <strong>{{ $supplier->name }}</strong>?</p>
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Attention :</strong> Cette action est irréversible.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <form action="{{ route('suppliers.destroy', $supplier->id) }}" method="POST" style="display: inline;">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-trash me-1"></i> Supprimer définitivement
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
 @endsection

@@ -15,10 +15,14 @@ class AdminMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || !auth()->user()->isAdmin()) {
-            return redirect('/');
+        if (!auth()->check()) {
+            return redirect()->route('login');
         }
-        
+
+        if (!auth()->user()->isAdmin()) {
+            abort(403, 'Accès refusé. Vous devez être administrateur pour accéder à cette page.');
+        }
+
         return $next($request);
     }
 }

@@ -15,10 +15,14 @@ class PharmacistMiddleware
      */
     public function handle(Request $request, Closure $next): Response
     {
-        if (!auth()->check() || !auth()->user()->isPharmacist()) {
-            return redirect('/');
+        if (!auth()->check()) {
+            return redirect()->route('login');
         }
-        
+
+        if (!auth()->user()->isPharmacist() && !auth()->user()->isAdmin()) {
+            abort(403, 'Accès refusé. Vous devez être pharmacien pour accéder à cette page.');
+        }
+
         return $next($request);
     }
 }

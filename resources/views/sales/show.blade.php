@@ -15,6 +15,24 @@
     </div>
 </div>
 
+@if(session('success'))
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        {{ session('success') }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
+@if($errors->any())
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <ul class="mb-0">
+            @foreach($errors->all() as $error)
+                <li>{{ $error }}</li>
+            @endforeach
+        </ul>
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    </div>
+@endif
+
 <div class="row">
     <div class="col-md-8">
         <div class="card mb-4">
@@ -211,6 +229,12 @@
                     <a href="{{ route('sales.create') }}" class="btn btn-success">
                         <i class="fas fa-plus me-1"></i> Nouvelle vente
                     </a>
+                    
+                    @if($sale->sale_date >= now()->subDays(7) && Auth::user()->isAdmin())
+                        <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deleteSaleModal">
+                            <i class="fas fa-trash me-1"></i> Supprimer la vente
+                        </button>
+                    @endif
                 </div>
             </div>
         </div>
@@ -251,4 +275,129 @@
         @endif
     </div>
 </div>
+
+@if($sale->sale_date >= now()->subDays(7) && Auth::user()->isAdmin())
+    <!-- Modal de confirmation de suppression -->
+    <div class="modal fade" id="deleteSaleModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Supprimer la vente
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-danger">
+                        <strong><i class="fas fa-exclamation-triangle me-1"></i>ATTENTION!</strong>
+                        Cette action est définitive et irréversible.
+                    </div>
+                    
+                    <p>Êtes-vous absolument sûr de vouloir supprimer la vente <strong>{{ $sale->sale_number }}</strong> ?</p>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>Informations de la vente :</strong>
+                            <ul>
+                                <li>Date : {{ $sale->sale_date->format('d/m/Y H:i') }}</li>
+                                <li>Montant : {{ number_format($sale->total_amount, 2) }} €</li>
+                                <li>Client : {{ $sale->client ? $sale->client->full_name : 'Anonyme' }}</li>
+                                <li>Vendeur : {{ $sale->user->name }}</li>
+                            </ul>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>Conséquences :</strong>
+                            <ul class="text-danger">
+                                <li>La vente sera définitivement supprimée</li>
+                                <li>Le stock des produits sera restauré</li>
+                                <li>Les données ne pourront pas être récupérées</li>
+                                <li>Cette action sera tracée dans les logs</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="card">
+                        <div class="card-header">
+                            <strong>Produits qui seront remis en stock :</strong>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Produit</th>
+                                            <th class="text-center">Quantité à remettre</th>
+                                            <th class="text-center">Stock actuel</th>
+                                            <th class="text-center">Nouveau stock</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($sale->saleItems as $item)
+                                            <tr>
+                                                <td>{{ $item->product->name }}</td>
+                                                <td class="text-center">{{ $item->quantity }}</td>
+                                                <td class="text-center">{{ $item->product->stock_quantity }}</td>
+                                                <td class="text-center text-success">
+                                                    <strong>{{ $item->product->stock_quantity + $item->quantity }}</strong>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" id="confirmDelete" required>
+                        <label class="form-check-label text-danger" for="confirmDelete">
+                            <strong>Je comprends que cette action est irréversible et je souhaite procéder à la suppression</strong>
+                        </label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Annuler
+                    </button>
+                    <form action="{{ route('sales.destroy', $sale->id) }}" method="POST" style="display: inline;" id="deleteSaleForm">
+                        @csrf
+                        @method('DELETE')
+                        <button type="submit" class="btn btn-danger" id="confirmDeleteBtn" disabled>
+                            <i class="fas fa-trash me-1"></i>Supprimer définitivement
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+@endif
+
 @endsection
+
+@if($sale->sale_date >= now()->subDays(7) && Auth::user()->isAdmin())
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const confirmCheckbox = document.getElementById('confirmDelete');
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+    const deleteSaleForm = document.getElementById('deleteSaleForm');
+    
+    if (confirmCheckbox && confirmDeleteBtn) {
+        confirmCheckbox.addEventListener('change', function() {
+            confirmDeleteBtn.disabled = !this.checked;
+        });
+        
+        deleteSaleForm.addEventListener('submit', function(e) {
+            if (!confirmCheckbox.checked) {
+                e.preventDefault();
+                alert('Vous devez cocher la case de confirmation pour procéder à la suppression.');
+                return false;
+            }
+            
+            return confirm('Dernière confirmation : êtes-vous vraiment sûr de vouloir supprimer cette vente ? Cette action est irréversible.');
+        });
+    }
+});
+</script>
+@endsection
+@endif
