@@ -75,7 +75,40 @@ class AuthController extends Controller
                 return redirect()->intended(route('pharmacist.dashboard'));
             }
         }
+// In AuthController::login method, after successful authentication, add:
+if (Auth::attempt($credentials, $remember)) {
+    $request->session()->regenerate();
+    
+    $user = Auth::user();
+    
+    // Update last login info
+    $user->update([
+        'last_login_at' => now(),
+        'last_login_ip' => $request->ip(),
+    ]);
+    
+    // Log login activity
+    ActivityLog::logActivity(
+        'login',
+        'Connexion réussie',
+        null,
+        null,
+        ['ip' => $request->ip(), 'user_agent' => $request->userAgent()]
+    );
+    
+    Log::info('User logged in successfully', [
+        'user_id' => $user->id,
+        'email' => $user->email,
+        'ip' => $request->ip()
+    ]);
 
+    // Redirect based on user role
+    if ($user->isAdmin()) {
+        return redirect()->intended(route('admin.dashboard'));
+    } else {
+        return redirect()->intended(route('pharmacist.dashboard'));
+    }
+}
         return redirect()->back()
             ->withErrors(['email' => 'Ces identifiants ne correspondent pas à nos enregistrements.'])
             ->withInput();

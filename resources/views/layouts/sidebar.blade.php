@@ -90,9 +90,40 @@
             </li>
             
             @if(Auth::user()->isAdmin())
+            <!-- Administration Section -->
+            <li class="nav-item mt-3">
+                <h6 class="nav-header text-white-50 text-uppercase small">Administration</h6>
+            </li>
+            
             <li class="nav-item">
-                <a class="nav-link" href="#">
-                    <i class="fas fa-cog"></i> Administration
+                <a class="nav-link {{ request()->is('admin/users*') ? 'active' : '' }}" href="{{ route('admin.users.index') }}">
+                    <i class="fas fa-users-cog"></i> Gestion des utilisateurs
+                    @php
+                        $inactiveUsers = \App\Models\User::where('is_active', false)->count();
+                        $passwordChangeRequired = \App\Models\User::where('force_password_change', true)->count();
+                        $userAlerts = $inactiveUsers + $passwordChangeRequired;
+                    @endphp
+                    @if($userAlerts > 0)
+                        <span class="badge bg-warning text-dark rounded-pill ms-2">{{ $userAlerts }}</span>
+                    @endif
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('admin/activity-logs*') ? 'active' : '' }}" href="{{ route('admin.activity-logs') }}">
+                    <i class="fas fa-history"></i> Logs d'activité
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('admin/administration*') ? 'active' : '' }}" href="{{ route('admin.administration') }}">
+                    <i class="fas fa-cogs"></i> Administration système
+                </a>
+            </li>
+            
+            <li class="nav-item">
+                <a class="nav-link {{ request()->is('admin/settings*') ? 'active' : '' }}" href="{{ route('admin.settings') }}">
+                    <i class="fas fa-sliders-h"></i> Paramètres système
                 </a>
             </li>
             @endif

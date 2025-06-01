@@ -17,11 +17,21 @@ class User extends Authenticatable implements JWTSubject
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
-        'email',
-        'password',
-        'role',
-    ];
+    'name',
+    'email',
+    'password',
+    'role',
+    'phone',
+    'date_of_birth',
+    'address',
+    'profile_photo',
+    'is_active',
+    'last_login_at',
+    'last_login_ip',
+    'permissions',
+    'password_changed_at',
+    'force_password_change',
+];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -38,10 +48,16 @@ class User extends Authenticatable implements JWTSubject
      *
      * @var array<string, string>
      */
-    protected $casts = [
-        'email_verified_at' => 'datetime',
-        'password' => 'hashed',
-    ];
+   protected $casts = [
+    'email_verified_at' => 'datetime',
+    'password' => 'hashed',
+    'date_of_birth' => 'date',
+    'is_active' => 'boolean',
+    'last_login_at' => 'datetime',
+    'permissions' => 'array',
+    'password_changed_at' => 'datetime',
+    'force_password_change' => 'boolean',
+];
 
     /**
      * Get the identifier that will be stored in the subject claim of the JWT.
@@ -82,4 +98,9 @@ class User extends Authenticatable implements JWTSubject
     {
         return $this->role === 'pharmacien';
     }
+    public function activityLogs()
+{
+    return $this->hasMany(ActivityLog::class);
+}
+    
 }

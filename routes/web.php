@@ -114,4 +114,35 @@ Route::middleware('auth')->group(function () {
         Route::post('purchases/{id}/receive', [PurchaseController::class, 'processReception'])->name('purchases.process-reception');
         Route::patch('purchases/{id}/cancel', [PurchaseController::class, 'cancel'])->name('purchases.cancel');
     });
+    // Add these routes in the admin middleware group
+Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [AdminController::class, 'index'])->name('dashboard');
+    
+    // Administration panel
+    Route::get('/administration', [AdminController::class, 'administration'])->name('administration');
+    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
+    Route::post('/settings', [AdminController::class, 'updateSettings'])->name('settings.update');
+    
+    // User management
+    Route::resource('users', UserController::class)->names([
+        'index' => 'users.index',
+        'create' => 'users.create',
+        'store' => 'users.store',
+        'show' => 'users.show',
+        'edit' => 'users.edit',
+        'update' => 'users.update',
+        'destroy' => 'users.destroy'
+    ]);
+    
+    // Additional user management routes
+    Route::patch('users/{id}/toggle-status', [UserController::class, 'toggleStatus'])->name('users.toggle-status');
+    Route::patch('users/{id}/reset-password', [UserController::class, 'resetPassword'])->name('users.reset-password');
+    Route::get('users/{id}/activity', [UserController::class, 'activityLogs'])->name('users.activity-logs');
+    
+    // Activity logs
+    Route::get('/activity-logs', [AdminController::class, 'activityLogs'])->name('activity-logs');
+    Route::get('/activity-logs/export', [AdminController::class, 'exportActivityLogs'])->name('export-activity-logs');
+    Route::post('/clear-old-logs', [AdminController::class, 'clearOldLogs'])->name('clear-old-logs');
+});
 });

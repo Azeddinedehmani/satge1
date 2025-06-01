@@ -63,5 +63,7 @@ class Kernel extends HttpKernel
         'verified' => \Illuminate\Auth\Middleware\EnsureEmailIsVerified::class,
         'admin' => \App\Http\Middleware\AdminMiddleware::class,
         'pharmacist' => \App\Http\Middleware\PharmacistMiddleware::class,
+        // Add this to the $middlewareAliases array:
+'log.activity' => \App\Http\Middleware\LogActivity::class,
     ];
 }
