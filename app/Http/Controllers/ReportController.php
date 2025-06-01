@@ -34,10 +34,10 @@ class ReportController extends Controller
         if ($user->isAdmin()) {
             $purchaseStats = $this->getPurchaseStats();
             $userStats = $this->getUserStats();
-            return view('reports.index', compact('salesStats', 'inventoryStats', 'clientStats', 'purchaseStats', 'userStats'));
+            return view('rapports.index', compact('salesStats', 'inventoryStats', 'clientStats', 'purchaseStats', 'userStats'));
         }
         
-        return view('reports.index', compact('salesStats', 'inventoryStats', 'clientStats'));
+        return view('rapports.index', compact('salesStats', 'inventoryStats', 'clientStats'));
     }
 
     /**
@@ -66,7 +66,7 @@ class ReportController extends Controller
         $totalTransactions = Sale::whereBetween('sale_date', [$dateFrom, $dateTo])->count();
         $averageTransaction = $totalTransactions > 0 ? $totalSales / $totalTransactions : 0;
         
-        return view('reports.sales', compact(
+        return view('rapports.sales', compact(
             'salesByPeriod', 'topProducts', 'salesByUser', 'salesByPaymentMethod',
             'totalSales', 'totalTransactions', 'averageTransaction',
             'dateFrom', 'dateTo', 'groupBy'
@@ -112,7 +112,7 @@ class ReportController extends Controller
         $totalStockValue = Product::sum(DB::raw('stock_quantity * purchase_price'));
         $averageStockLevel = Product::avg('stock_quantity');
 
-        return view('reports.inventory', compact(
+        return view('rapports.inventory', compact(
             'lowStockProducts', 'outOfStockProducts', 'expiringProducts', 'categoriesValue',
             'totalProducts', 'totalStockValue', 'averageStockLevel'
         ));
@@ -158,7 +158,7 @@ class ReportController extends Controller
         $activeClients = Client::where('active', true)->count();
         $clientsWithPurchases = Client::has('sales')->count();
 
-        return view('reports.clients', compact(
+        return view('rapports.clients', compact(
             'topClients', 'newClientsByMonth', 'clientsWithAllergies',
             'totalClients', 'activeClients', 'clientsWithPurchases',
             'dateFrom', 'dateTo'
@@ -228,7 +228,7 @@ class ReportController extends Controller
             ->take(20)
             ->get();
 
-        return view('reports.financial', compact(
+        return view('rapports.financial', compact(
             'revenue', 'expenses', 'profit', 'revenueByMonth', 'expensesByMonth', 'productMargins',
             'dateFrom', 'dateTo'
         ));
@@ -278,7 +278,7 @@ class ReportController extends Controller
             ->where('status', 'completed')->count();
         $completionRate = $totalPrescriptions > 0 ? ($completedPrescriptions / $totalPrescriptions) * 100 : 0;
 
-        return view('reports.prescriptions', compact(
+        return view('rapports.prescriptions', compact(
             'prescriptionsByStatus', 'expiredPrescriptions', 'topPrescribedMedications',
             'totalPrescriptions', 'completedPrescriptions', 'completionRate',
             'dateFrom', 'dateTo'

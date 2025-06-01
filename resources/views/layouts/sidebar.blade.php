@@ -81,13 +81,15 @@
                     @endif
                 </a>
             </li>
+            @endif
             
             <li class="nav-item">
-                <a class="nav-link" href="#">
+                <a class="nav-link {{ request()->is('rapports*') ? 'active' : '' }}" href="{{ route('reports.index') }}">
                     <i class="fas fa-chart-line"></i> Rapports
                 </a>
             </li>
             
+            @if(Auth::user()->isAdmin())
             <li class="nav-item">
                 <a class="nav-link" href="#">
                     <i class="fas fa-cog"></i> Administration
